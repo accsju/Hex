@@ -1,12 +1,11 @@
-
-const hex = { //仮想的なヘックス 
+const hex = { 
     mapData: null, // w, h, typ
     mapState: null, // {index, d, color, name, restP}
     init() {
         const w = 20;
         const h = 16;
         const type = "B";
-        const WindowWidth = window.innerWidth/2;
+        const WindowWidth = window.innerWidth - 50 ;
         const a = 2*WindowWidth/(3*w+1);
         const svg = document.getElementById("HexMap");
         svg.innerHTML = ""; 
@@ -26,7 +25,7 @@ const hex = { //仮想的なヘックス
                 const hex = {
                         index: w*(i-1) + j,
                         d: `M${initX+a/2} ${initY} L${initX} ${initY+Math.sqrt(3)*a/2} L${initX+a/2} ${initY+Math.sqrt(3)*a} L${initX+3*a/2} ${initY+Math.sqrt(3)*a} L${initX+2*a} ${initY+Math.sqrt(3)*a/2} L${initX+3*a/2} ${initY} Z`,
-                        registance: Math.floor(Math.random()*10)+1,
+                        resistance: Math.floor(Math.random()*10)+1,
                         color: null,
                         name: null,
                         restP: null //計算用メモリとしてのプロパティ         
@@ -46,7 +45,7 @@ const hex = { //仮想的なヘックス
         }
         this.mapState = initMapState;
     },
-    search(x,type,w,h) { //xは入力されたindex、typeはヘックスマップの左上の形状、wは横マスの数、hは縦マスの数
+    search(x,type,w,h) { 
         if (type === "A") {
             if (w%2===0 && h%2===0) {
                 if (x===1) return [x+1,x+w,x+w+1] 
@@ -170,46 +169,44 @@ const hex = { //仮想的なヘックス
             }
         }
     },
-    allSearchIndexs(indexObject, mapState, p) {//始点の索引オブジェクト、そこに与える点数  
-        // if (p-indexObject.registance < 0) {
-        //     return [];
-        // } else if(p-indexObject.registance === 0) {
-        //     return [indexObject.index];
-        // };
-        // const current = [indexObject.index];
-        // const w = this.mapData.w;
-        // const h = this.mapData.h;
-        // const type = this.mapData.type;
-
-        // const result = [indexObject.index];
-        // // indexObject.restP = p - indexObject.registance;
-        // mapState[indexObject.index].restP = p-indexObject.registance;
-        // while (current.length!==0) {
-        //     const l = current.length;
-        //     const a = [];
-        //     for (let i=0;i<l;i++) {
-        //         const s = this.search(current[i],type,w,h);
-        //         const sl = s.length;
-        //         for (let j=0;j<sl;j++) {
-        //             const restP = mapState[indexObject.index].restP - mapState[current[j]].registance;
-        //             console.log(mapState[indexObject.index].restP, mapState[current[j]].registance)
-        //             if (restP >= 0) {
-        //                 mapState[current[j]].restP = restP;
-        //                 a.push(current[j]);
-        //             }
-        //         }
-        //         mapState[current[i]].restP = null;
-        //     }
-        //     current.length = 0;
-        //     let al = a.length;
-        //     for (let i=0;i<al;i++) {
-        //         if (!result.includes(a[i])) { 
-        //             result.push(a[i]);
-        //             current.push(a[i]);
-        //         }
-        //     }
-        // }
-        // return result;//影響がある索引の集合が返り値
+    allSearchIndexs(indexObject, p) {
+        if (p-indexObject.resistance < 0) {
+            return [];
+        } else if(p-indexObject.resistance === 0) {
+            return [indexObject.index];
+        };
+        const current = [indexObject.index];
+        const w = this.mapData.w;
+        const h = this.mapData.h;
+        const type = this.mapData.type;
+        const mapState = this.mapState;
+        const result = [indexObject.index];
+        mapState[indexObject.index-1].restP = p-indexObject.resistance;
+        while (current.length!==0) {
+            const l = current.length;
+            const a = [];
+            for (let i=0;i<l;i++) {
+                const s = this.search(current[i],type,w,h);
+                const sl = s.length;
+                for (let j=0;j<sl;j++) {
+                    const restP = mapState[current[i]-1].restP-mapState[s[j]-1].resistance;
+                    if (restP >= 0) {
+                        mapState[s[j]-1].restP = restP;
+                        a.push(s[j]);
+                    }
+                }
+                mapState[current[i]-1].restP = null;
+            }
+            current.length = 0;
+            let al = a.length;
+            for (let i=0;i<al;i++) {
+                if (!result.includes(a[i])) { 
+                    result.push(a[i]);
+                    current.push(a[i]);
+                }
+            }
+        }
+        return result;
     },
     create() {
         const svg = document.getElementById("HexMap");
@@ -222,6 +219,7 @@ const hex = { //仮想的なヘックス
             path.setAttribute("stroke", "gray");
             path.setAttribute("stroke-width", "1");
             path.setAttribute("fill", "transparent");
+            // path.setAttribute("fill", `rgba(${Math.floor(Math.random()*255+1)},${Math.floor(Math.random()*255+1)},${Math.floor(Math.random()*255+1)},${Math.random()})`);
             svg.appendChild(path);
         }
     },
@@ -236,9 +234,8 @@ const hex = { //仮想的なヘックス
         svg.onclick = (e) => {
             const id = e.target.id;
             const index = Number(id.slice(3, id.length));
-            // const arr = this.search( index, this.mapData.type, this.mapData.w, this.mapData.h);
-            // const arr = this.allSearchIndexs( this.mapState[index-1], this.mapState, 20)
-            console.log(arr);
+            const indexObject = this.mapState[index-1];
+            const arr = this.allSearchIndexs( indexObject , 15)
             for (let i=0;i<arr.length;i++) {
                 const hex = document.getElementById(`hex${arr[i]}`);
                 hex.style.fill = "red";
@@ -248,17 +245,33 @@ const hex = { //仮想的なヘックス
     hover() {
         const svg = document.getElementById("HexMap");
         svg.onmousemove = (e) => {
+            // const id = e.target.id;
+            // const hex = document.getElementById(id);
+            // hex.style.strokeWidth = "3";
             const id = e.target.id;
-            const hex = document.getElementById(id);
-            hex.style.fill = "red";
+            const index = Number(id.slice(3, id.length));
+            const indexObject = this.mapState[index-1];
+            const arr = this.allSearchIndexs( indexObject , 15)
+            for (let i=0;i<arr.length;i++) {
+                const hex = document.getElementById(`hex${arr[i]}`);
+                hex.style.fill = "red";
+            }
         }
     },
     mouseout() {
         const svg = document.getElementById("HexMap");
         svg.onmouseout = (e) => {
+            // const id = e.target.id;
+            // const hex = document.getElementById(id);
+            // hex.style.strokeWidth = "1"
             const id = e.target.id;
-            const hex = document.getElementById(id);
-            hex.style.fill = "transparent";
+            const index = Number(id.slice(3, id.length));
+            const indexObject = this.mapState[index-1];
+            const arr = this.allSearchIndexs( indexObject , 15)
+            for (let i=0;i<arr.length;i++) {
+                const hex = document.getElementById(`hex${arr[i]}`);
+                hex.style.fill = "transparent";
+            }
         }
     }
 }
